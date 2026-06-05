@@ -129,6 +129,15 @@ canvas{width:100%!important;max-height:220px}
     </div>
     <div id="login-error"></div>
   </div>
+  <!-- Config URL prima del login -->
+  <div style="margin-top:20px;width:100%;max-width:340px">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:6px;text-align:center">⚙️ Prima configurazione – incolla l'URL dello script</div>
+    <div style="display:flex;gap:8px">
+      <input id="pre-login-url" class="form-input" type="url" placeholder="https://script.google.com/macros/s/.../exec" style="font-size:12px;padding:10px">
+      <button class="btn btn-primary btn-sm" onclick="salvaUrlPreLogin()">Salva</button>
+    </div>
+    <div id="pre-login-msg" style="font-size:12px;color:var(--green);margin-top:6px;text-align:center;height:16px"></div>
+  </div>
 </div>
 
 <!-- ACCESSO NEGATO -->
@@ -363,7 +372,7 @@ const CAT_FIX=['Mutuo/Affitto','Utenze (luce/gas/acqua)','Internet/Telefono','As
 const CAT_ICONS={'Alimentari':'🛒','Ristoranti/Bar':'🍕','Trasporti':'🚌','Carburante':'⛽','Abbigliamento':'👕','Salute/Farmacia':'💊','Svago/Hobby':'🎮','Casa/Manutenzione':'🔧','Vacanze':'✈️','Regali':'🎁','Istruzione':'📚','Sport':'⚽','Tecnologia':'💻','Mutuo/Affitto':'🏠','Utenze (luce/gas/acqua)':'💡','Internet/Telefono':'📶','Assicurazioni':'🛡️','Abbonamenti':'📺','Palestra':'🏋️'};
 const COLORS=['#4f8ef7','#4caf7d','#f74f6e','#f7c94f','#a855f7','#f97316','#06b6d4','#ec4899','#84cc16','#14b8a6'];
 // ── SOSTITUISCI CON IL TUO CLIENT ID GOOGLE ──
-const GOOGLE_CLIENT_ID = '1043354281348-bb0d087bnj9ef8o822aij0isv2v1foir.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = 'INSERISCI_IL_TUO_CLIENT_ID.apps.googleusercontent.com';
 
 // ── STATO ──
 const S = {
@@ -384,6 +393,18 @@ const getCoda=()=>ls.get('coda_sync',[]);
 const getMembri=()=>ls.get('membri',['Persona 1','Persona 2']);
 
 // ── GOOGLE LOGIN ──
+function salvaUrlPreLogin() {
+  const url = document.getElementById('pre-login-url').value.trim();
+  if (!url || !url.includes('script.google.com')) {
+    document.getElementById('pre-login-msg').style.color = 'var(--red)';
+    document.getElementById('pre-login-msg').textContent = '❌ URL non valido';
+    return;
+  }
+  ls.set('scriptUrl', url);
+  document.getElementById('pre-login-msg').style.color = 'var(--green)';
+  document.getElementById('pre-login-msg').textContent = '✅ URL salvato! Ora accedi con Google';
+}
+
 function initGoogle() {
   if (typeof google === 'undefined') {
     // Riprova dopo 500ms se Google non è ancora caricato
