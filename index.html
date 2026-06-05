@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Spese Casa">
 <title>Spese Casa</title>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{--bg:#0f0f23;--card:#1a1a2e;--card2:#16213e;--accent:#4f8ef7;--green:#4caf7d;--red:#f74f6e;--yellow:#f7c94f;--purple:#a855f7;--text:#e8eaf6;--muted:#7986cb;--border:#283593;--radius:16px}
@@ -384,27 +384,37 @@ const getCoda=()=>ls.get('coda_sync',[]);
 const getMembri=()=>ls.get('membri',['Persona 1','Persona 2']);
 
 // ── GOOGLE LOGIN ──
-window.onload = () => {
-  // Inizializza Google Identity Services
-  if (typeof google !== 'undefined') {
-    google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: onGoogleLogin,
-      auto_select: true,
-      cancel_on_tap_outside: false
-    });
-    google.accounts.id.renderButton(
-      document.getElementById('g_id_signin'),
-      { theme:'filled_blue', size:'large', text:'signin_with', shape:'pill', width:280 }
-    );
-    // Prova auto-login se già autenticato
-    google.accounts.id.prompt();
-  } else {
-    // Fallback se Google non carica (es. offline)
-    const cached = ls.get('auth_cache');
-    if (cached) { S.auth = cached; avviaApp(); }
-    else document.getElementById('login-error').textContent = '⚠️ Connessione necessaria per il primo accesso';
+function initGoogle() {
+  if (typeof google === 'undefined') {
+    // Riprova dopo 500ms se Google non è ancora caricato
+    setTimeout(initGoogle, 500);
+    return;
   }
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: onGoogleLogin,
+    auto_select: false,
+    cancel_on_tap_outside: false,
+    ux_mode: 'popup'
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('g_id_signin'),
+    { theme:'filled_blue', size:'large', text:'signin_with', shape:'pill', width:280 }
+  );
+  // Prova auto-login solo se c'è cache
+  const cached = ls.get('auth_cache');
+  if (cached) google.accounts.id.prompt();
+}
+
+window.onload = () => {
+  // Controlla cache offline
+  const cached = ls.get('auth_cache');
+  if (cached && !navigator.onLine) {
+    S.auth = cached;
+    avviaApp();
+    return;
+  }
+  initGoogle();
 };
 
 function onGoogleLogin(response) {
