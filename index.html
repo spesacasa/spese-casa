@@ -454,40 +454,31 @@ function onGoogleLogin(response) {
 async function verificaRuolo(email) {
   const url = getScriptUrl();
   if (!url) {
-    // Nessun URL configurato → usa cache se disponibile
     const cached = ls.get('auth_cache');
-    if (cached && cached.email === email) {
-      S.auth = { ...S.auth, ...cached };
-      avviaApp(); return;
-    }
+    if (cached && cached.email === email) { S.auth={...S.auth,...cached}; avviaApp(); return; }
     document.getElementById('login-loader').style.display='none';
-    document.getElementById('login-error').textContent='⚠️ Configura prima l\'URL dello script';
+    document.getElementById('login-error').textContent='⚠️ Inserisci prima l\'URL dello script qui sotto';
     return;
   }
   try {
-    const r = await fetch(`${url}?azione=PROFILO`);
+    // Invia email come parametro GET
+    const r = await fetch(`${url}?azione=PROFILO&email=${encodeURIComponent(email)}`);
     const j = await r.json();
     if (!j.ok) {
       document.getElementById('login-loader').style.display='none';
       document.getElementById('denied-screen').style.display='flex';
       document.getElementById('login-screen').style.display='none';
-      document.getElementById('denied-email').textContent=email;
+      document.getElementById('denied-email').textContent=email+' – '+j.errore;
       return;
     }
     S.auth.ruolo    = j.ruolo;
     S.auth.permessi = j.permessi;
-    ls.set('auth_cache', { email:S.auth.email, nome:S.auth.nome, foto:S.auth.foto, ruolo:j.ruolo, permessi:j.permessi });
+    ls.set('auth_cache',{email:S.auth.email,nome:S.auth.nome,foto:S.auth.foto,ruolo:j.ruolo,permessi:j.permessi});
     avviaApp();
   } catch(e) {
-    // Offline: usa cache
     const cached = ls.get('auth_cache');
-    if (cached && cached.email === email) {
-      S.auth = { ...S.auth, ...cached };
-      avviaApp();
-    } else {
-      document.getElementById('login-loader').style.display='none';
-      document.getElementById('login-error').textContent='❌ Errore di connessione';
-    }
+    if (cached && cached.email===email) { S.auth={...S.auth,...cached}; avviaApp(); }
+    else { document.getElementById('login-loader').style.display='none'; document.getElementById('login-error').textContent='❌ Errore: '+e.message; }
   }
 }
 
@@ -651,7 +642,7 @@ window.addEventListener('offline',()=>{ document.getElementById('offline-badge')
 
 async function inviaAlSheet(tipo,dati) {
   const url=getScriptUrl(); if(!url) return;
-  const payload={tipo,dati};
+  const payload={tipo,dati,email:S.auth.email};
   if(!navigator.onLine){ accoda(payload); return; }
   try {
     await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload),mode:'no-cors'});
@@ -680,7 +671,7 @@ async function sincronizzaDaSheet() {
   toast('🔄 Sincronizzazione…');
   try {
     const ora=new Date();
-    const r=await fetch(`${url}?azione=LEGGI&anno=${ora.getFullYear()}&limit=500`);
+    const r=await fetch(`${url}?azione=LEGGI&email=${encodeURIComponent(S.auth.email)}&anno=${ora.getFullYear()}&limit=500`);
     const j=await r.json();
     if(!j.ok){ toast('❌ '+j.errore,'error'); return; }
     const spLocali=getSpese(); const enLocali=getEntrate();
