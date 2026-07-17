@@ -395,26 +395,6 @@ const getCoda=()=>ls.get('coda_sync',[]);
 const getMembri=()=>ls.get('membri',['Persona 1','Persona 2']);
 
 // ── GOOGLE LOGIN ──
-// ── SERVICE WORKER ──
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/spese-casa/sw.js')
-      .then(reg => {
-        console.log('[SW] Registrato:', reg.scope);
-        // Avvisa se c'è un aggiornamento disponibile
-        reg.addEventListener('updatefound', () => {
-          const newSw = reg.installing;
-          newSw.addEventListener('statechange', () => {
-            if (newSw.state === 'installed' && navigator.serviceWorker.controller) {
-              toast('🔄 Aggiornamento disponibile – ricarica l\'app');
-            }
-          });
-        });
-      })
-      .catch(err => console.log('[SW] Errore registrazione:', err));
-  });
-}
-
 function salvaUrlPreLogin() {
   const url = document.getElementById('pre-login-url').value.trim();
   if (!url || !url.includes('script.google.com')) {
