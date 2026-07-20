@@ -508,6 +508,33 @@ function avviaApp() {
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   inizializza();
+  // Sincronizzazione automatica silenziosa all'avvio
+  if (navigator.onLine) setTimeout(syncSilenziosa, 1500);
+}
+
+async function syncSilenziosa() {
+  const url = getScriptUrl();
+  if (!url) return;
+  try {
+    const ora = new Date();
+    const r = await fetch(`${url}?azione=LEGGI&email=${encodeURIComponent(S.auth.email)}&anno=${ora.getFullYear()}&limit=500`);
+    const j = await r.json();
+    if (!j.ok) return;
+    // Sostituisce silenziosamente i dati locali con quelli del foglio
+    ls.set('spese',   j.spese   || []);
+    ls.set('entrate', j.entrate || []);
+    ls.set('coda_sync', []);
+    if (j.membri?.length) { ls.set('membri', j.membri); renderUtenti(); }
+    ls.set('ultimo_sync', new Date().toISOString());
+    // Aggiorna UI silenziosamente
+    aggiornaRiepilogo();
+    aggiornaListaSpese();
+    document.getElementById('cfg-count').textContent=(getSpese().length+getEntrate().length)+' record';
+    aggiornaStatoSync();
+  } catch(e) {
+    // Fallisce silenziosamente – i dati locali restano invariati
+    console.log('[Sync] Errore:', e.message);
+  }
 }
 
 function logout() {
@@ -690,25 +717,31 @@ async function sincronizzaDaSheet() {
   const url=getScriptUrl();
   if(!url){ toast('Configura prima l\'URL','error'); return; }
   if(!navigator.onLine){ toast('Sei offline','error'); return; }
+
+  // Conferma prima di sovrascrivere
+  if (!confirm('⚠️ Questa operazione sostituisce tutti i dati locali con quelli del foglio Google. Continuare?')) return;
+
   toast('🔄 Sincronizzazione…');
   try {
     const ora=new Date();
     const r=await fetch(`${url}?azione=LEGGI&email=${encodeURIComponent(S.auth.email)}&anno=${ora.getFullYear()}&limit=500`);
     const j=await r.json();
     if(!j.ok){ toast('❌ '+j.errore,'error'); return; }
-    const spLocali=getSpese(); const enLocali=getEntrate();
-    const kSp=s=>`${s.data}-${s.importo}-${s.chi}`;
-    const kEn=e=>`${e.mese}-${e.importo}-${e.membro}`;
-    const ksL=new Set(spLocali.map(kSp)); const keL=new Set(enLocali.map(kEn));
-    const nSp=j.spese.filter(s=>!ksL.has(kSp(s)));
-    const nEn=j.entrate.filter(e=>!keL.has(kEn(e)));
-    if(nSp.length||nEn.length){ ls.set('spese',[...spLocali,...nSp]); ls.set('entrate',[...enLocali,...nEn]); }
-    if(j.membri?.length){ ls.set('membri',j.membri); renderUtenti(); }
-    ls.set('ultimo_sync',new Date().toISOString());
-    aggiornaRiepilogo(); aggiornaListaSpese();
+
+    // Sostituisci completamente i dati locali con quelli del foglio
+    ls.set('spese',   j.spese   || []);
+    ls.set('entrate', j.entrate || []);
+    ls.set('coda_sync', []); // svuota la coda pendente
+
+    if(j.membri?.length) { ls.set('membri', j.membri); renderUtenti(); }
+
+    ls.set('ultimo_sync', new Date().toISOString());
+    aggiornaRiepilogo();
+    aggiornaListaSpese();
     document.getElementById('cfg-count').textContent=(getSpese().length+getEntrate().length)+' record';
-    toast(nSp.length+nEn.length>0?`✅ Importati ${nSp.length+nEn.length} record`:'✅ Tutto aggiornato!');
+    toast(`✅ Importati ${j.spese.length} spese e ${j.entrate.length} entrate dal foglio`);
     aggiornaStatoSync();
+
   } catch(err){ toast('❌ '+err.message,'error'); }
 }
 
