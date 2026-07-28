@@ -918,8 +918,39 @@ function aggiornaRiepilogo(){
     .map(([k,v])=>`<div class="spesa-item"><div class="spesa-icon" style="background:#1a237e33">${CAT_ICONS[k]||'🏷️'}</div><div class="spesa-info"><div class="spesa-desc">${k}</div></div><div class="spesa-importo">${fmt(v)}</div></div>`).join('')
     ||'<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">Nessuna spesa</div>';
   const perMem={};spese.forEach(s=>perMem[s.chi]=(perMem[s.chi]||0)+s.importo);
+  const speseDelMese = spese; // già filtrate per mese
   document.getElementById('r-membri').innerHTML=Object.entries(perMem).sort((a,b)=>b[1]-a[1])
-    .map(([k,v])=>`<div class="spesa-item"><div class="spesa-icon" style="background:#4f8ef722;color:var(--accent);font-weight:700">${k.slice(0,2).toUpperCase()}</div><div class="spesa-info"><div class="spesa-desc">${k}</div></div><div class="spesa-importo">${fmt(v)}</div></div>`).join('')
+    .map(([k,v])=>{
+      const speseM = speseDelMese.filter(s=>s.chi===k).sort((a,b)=>b.importo-a.importo);
+      const righe  = speseM.map(s=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="width:30px;height:30px;border-radius:8px;background:#1a237e33;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">${CAT_ICONS[s.categoria]||'🏷️'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.descrizione}</div>
+            <div style="font-size:11px;color:var(--muted)">${fmtData(s.data)} · ${s.categoria} · ${s.metodo||''}</div>
+          </div>
+          <div style="font-size:14px;font-weight:800;color:var(--red);flex-shrink:0">${fmt(s.importo)}</div>
+        </div>`).join('');
+      const id = 'membro-detail-'+k.replace(/\s+/g,'_');
+      return `
+        <div class="spesa-item" onclick="toggleMembroDetail('${id}')" style="cursor:pointer;user-select:none">
+          <div class="spesa-icon" style="background:#4f8ef722;color:var(--accent);font-weight:700">${k.slice(0,2).toUpperCase()}</div>
+          <div class="spesa-info">
+            <div class="spesa-desc">${k}</div>
+            <div class="spesa-meta">${speseM.length} spese · tocca per dettagli</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="spesa-importo">${fmt(v)}</div>
+            <span id="arrow-${id}" style="color:var(--muted);font-size:16px;transition:transform .3s">▼</span>
+          </div>
+        </div>
+        <div id="${id}" style="display:none;background:var(--card2);border-radius:10px;padding:8px 12px;margin-bottom:8px;border:1px solid var(--border)">
+          ${righe||'<div style="color:var(--muted);font-size:13px;padding:8px 0;text-align:center">Nessuna spesa</div>'}
+          <div style="display:flex;justify-content:space-between;padding:8px 0 2px;font-size:13px;font-weight:700;border-top:1px solid var(--border);margin-top:4px">
+            <span>Totale ${k}</span><span style="color:var(--red)">${fmt(v)}</span>
+          </div>
+        </div>`;
+    }).join('')
     ||'<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">Nessun dato</div>';
   controllaBudget(getSpese());
 }
