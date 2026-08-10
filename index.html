@@ -1042,6 +1042,15 @@ function matchMese(ds){if(!ds)return false;const d=new Date(ds);return d.getMont
 function matchMeseStr(ms){if(!ms)return false;const[y,m]=ms.split('-').map(Number);return m-1===S.meseVis&&y===S.annoVis;}
 function matchMeseAnnoStr(ms,m,a){if(!ms)return false;const[y,mo]=ms.split('-').map(Number);return mo-1===m&&y===a;}
 function matchMeseAnnoNum(ds,m,a){if(!ds)return false;const d=new Date(ds);return d.getMonth()===m&&d.getFullYear()===a;}
+function toggleMembroDetail(id) {
+  const el    = document.getElementById(id);
+  const arrow = document.getElementById('arrow-'+id);
+  if (!el) return;
+  const aperto = el.style.display !== 'none';
+  el.style.display    = aperto ? 'none' : 'block';
+  arrow.style.transform = aperto ? '' : 'rotate(180deg)';
+}
+
 function fmt(n){return'€'+Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtData(s){if(!s)return'';const d=new Date(s);return d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'});}
 function toast(msg,tipo='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className=tipo==='error'?'error':tipo==='warning'?'warning':'';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
