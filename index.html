@@ -401,7 +401,41 @@ const getMembri=()=>ls.get('membri',['Persona 1','Persona 2']);
 const getBudget=()=>ls.get('budget',BUDGET_DEFAULT);
 const getEmailReport=()=>ls.get('emailReport','');
 
-// ── SERVICE WORKER ──
+// ── CATEGORIE DINAMICHE (caricate dal foglio) ──
+let CAT_FIX_DYN = [...CAT_FIX];
+let CAT_VAR_DYN = [...CAT_VAR];
+
+async function caricaImpostazioni() {
+  const url = getScriptUrl(); if (!url) return;
+  try {
+    const r = await fetch(`${url}?azione=IMPOSTAZIONI&email=${encodeURIComponent(S.auth.email)}`);
+    const j = await r.json();
+    if (!j.ok) return;
+    if (j.catFisse?.length) CAT_FIX_DYN = j.catFisse;
+    if (j.catVar?.length)   CAT_VAR_DYN = j.catVar;
+    if (j.metodi?.length) {
+      const sel = document.getElementById('metodo');
+      if (sel) { sel.innerHTML = j.metodi.map(m=>`<option>${m}</option>`).join(''); }
+    }
+    if (j.tipiEnt?.length) {
+      const sel = document.getElementById('entrata-tipo');
+      if (sel) { sel.innerHTML = j.tipiEnt.map(t=>`<option>${t}</option>`).join(''); }
+    }
+    if (j.membri?.length) { ls.set('membri', j.membri); renderUtenti(); }
+    aggiornaCatSelect();
+    ls.set('impostazioni_cache', j);
+    console.log('[Impostazioni] caricate dal foglio');
+  } catch(e) {
+    // Usa cache se disponibile
+    const cache = ls.get('impostazioni_cache');
+    if (cache) {
+      if (cache.catFisse?.length) CAT_FIX_DYN = cache.catFisse;
+      if (cache.catVar?.length)   CAT_VAR_DYN = cache.catVar;
+      aggiornaCatSelect();
+    }
+    console.log('[Impostazioni] uso cache:', e.message);
+  }
+}
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('/spese-casa/sw.js')
@@ -668,7 +702,10 @@ function avviaApp() {
   document.getElementById('pin-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   inizializza();
-  if(navigator.onLine) setTimeout(syncSilenziosa,1500);
+  if(navigator.onLine) {
+    setTimeout(caricaImpostazioni, 500);  // carica categorie dal foglio
+    setTimeout(syncSilenziosa, 2000);     // poi sincronizza i dati
+  }
 }
 
 function logout() {
@@ -754,8 +791,9 @@ function setTipo(t) {
   aggiornaCatSelect();
 }
 function aggiornaCatSelect() {
-  const sel=document.getElementById('categoria');
-  sel.innerHTML=(S.tipo==='Fissa'?CAT_FIX:CAT_VAR).map(c=>`<option>${c}</option>`).join('');
+  const sel = document.getElementById('categoria');
+  if (!sel) return;
+  sel.innerHTML = (S.tipo==='Fissa' ? CAT_FIX_DYN : CAT_VAR_DYN).map(c=>`<option>${c}</option>`).join('');
 }
 
 // ── SALVA SPESA ──
