@@ -376,7 +376,11 @@ canvas{width:100%!important;max-height:220px}
 <div id="toast"></div>
 
 <script>
-// ── COSTANTI ──
+// ── MAPPA EMAIL → NOME MEMBRO ──
+const EMAIL_NOMI = {
+  "gallork1989@gmail.com":           "Riccardo",
+  "beatrice.franciosi.pr@gmail.com": "Beatrice",
+};
 const MESI_IT=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const CAT_VAR=['Alimentari','Ristoranti/Bar','Trasporti','Carburante','Abbigliamento','Salute/Farmacia','Svago/Hobby','Casa/Manutenzione','Vacanze','Regali','Istruzione','Sport','Tecnologia','Altro variabile'];
 const CAT_FIX=['Mutuo/Affitto','Utenze (luce/gas/acqua)','Internet/Telefono','Assicurazioni','Abbonamenti','Rette scolastiche','Palestra','Altro fisso'];
@@ -747,7 +751,8 @@ function inizializza() {
   document.getElementById('readonly-banner').classList.toggle('hidden',p.scrivi!==false);
   const ce=document.getElementById('card-esporta');if(ce)ce.classList.toggle('hidden',!p.esporta);
 
-  S.utente=S.auth.nome||getMembri()[0];
+  // Usa nome membro dalla mappa email→nome, non il nome Google
+  S.utente = EMAIL_NOMI[S.auth.email] || getMembri()[0];
   renderUtenti(); aggiornaCatSelect(); aggiornaMeseLabel();
   aggiornaRiepilogo(); aggiornaListaSpese(); aggiornaSearchMembri();
   aggiornaStatoSync(); aggiornaStatoNotifiche();
