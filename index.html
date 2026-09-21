@@ -966,6 +966,24 @@ function aggiornaMeseLabel(){
 }
 
 // ── RIEPILOGO ──
+function controllaSyncFreshness() {
+  const banner = document.getElementById('sync-alert-banner');
+  if (!banner) return;
+  const ultimoSync = ls.get('ultimo_sync');
+  if (!ultimoSync) {
+    banner.style.display = 'flex';
+    banner.innerHTML = '⚠️ Dati mai sincronizzati – tocca per aggiornare';
+    return;
+  }
+  const minuti = Math.floor((Date.now() - new Date(ultimoSync).getTime()) / 60000);
+  if (minuti > 10) {
+    banner.style.display = 'flex';
+    banner.innerHTML = `⚠️ Ultimo aggiornamento ${minuti} min fa – tocca per aggiornare`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
 function aggiornaRiepilogo(){
   controllaSyncFreshness();
   const spese=getSpese().filter(s=>matchMese(s.data));
