@@ -670,7 +670,7 @@ function salvaUrlPreLogin() {
 
 function initGoogle() {
   if(typeof google==='undefined'){ setTimeout(initGoogle,500); return; }
-  google.accounts.id.initialize({ client_id:1043354281348-bb0d087bnj9ef8o822aij0isv2v1foir.apps.googleusercontent.com, callback:onGoogleLogin, auto_select:false, cancel_on_tap_outside:false, ux_mode:'popup' });
+  google.accounts.id.initialize({ client_id:'1043354281348-bb0d087bnj9ef8o822aij0isv2v1foir.apps.googleusercontent.com', callback:onGoogleLogin, auto_select:false, cancel_on_tap_outside:false, ux_mode:'popup' });
   google.accounts.id.renderButton(document.getElementById('g_id_signin'),{ theme:'filled_blue',size:'large',text:'signin_with',shape:'pill',width:280 });
   const cached=ls.get('auth_cache');
   if(cached) google.accounts.id.prompt();
