@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spese-casa-v1';
+const CACHE_NAME = 'spese-casa-v3'; // ← versione aggiornata forza refresh
 const ASSETS = [
   '/spese-casa/',
   '/spese-casa/index.html',
