@@ -391,7 +391,7 @@ const CAT_VAR=['Alimentari','Ristoranti/Bar','Trasporti','Carburante','Abbigliam
 const CAT_FIX=['Mutuo/Affitto','Utenze (luce/gas/acqua)','Internet/Telefono','Assicurazioni','Abbonamenti','Rette scolastiche','Palestra','Altro fisso'];
 const CAT_ICONS={'Alimentari':'🛒','Ristoranti/Bar':'🍕','Trasporti':'🚌','Carburante':'⛽','Abbigliamento':'👕','Salute/Farmacia':'💊','Svago/Hobby':'🎮','Casa/Manutenzione':'🔧','Vacanze':'✈️','Regali':'🎁','Istruzione':'📚','Sport':'⚽','Tecnologia':'💻','Mutuo/Affitto':'🏠','Utenze (luce/gas/acqua)':'💡','Internet/Telefono':'📶','Assicurazioni':'🛡️','Abbonamenti':'📺','Palestra':'🏋️'};
 const COLORS=['#4f8ef7','#4caf7d','#f74f6e','#f7c94f','#a855f7','#f97316','#06b6d4','#ec4899','#84cc16','#14b8a6'];
-const GOOGLE_CLIENT_ID = '1043354281348-bb0d087bnj9ef8o822aij0isv2v1foir.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID='INSERISCI_IL_TUO_CLIENT_ID.apps.googleusercontent.com';
 const BUDGET_DEFAULT=1500;
 
 // ── STATO ──
@@ -670,7 +670,7 @@ function salvaUrlPreLogin() {
 
 function initGoogle() {
   if(typeof google==='undefined'){ setTimeout(initGoogle,500); return; }
-  google.accounts.id.initialize({ client_id:GOOGLE_CLIENT_ID, callback:onGoogleLogin, auto_select:false, cancel_on_tap_outside:false, ux_mode:'popup' });
+  google.accounts.id.initialize({ client_id:1043354281348-bb0d087bnj9ef8o822aij0isv2v1foir.apps.googleusercontent.com, callback:onGoogleLogin, auto_select:false, cancel_on_tap_outside:false, ux_mode:'popup' });
   google.accounts.id.renderButton(document.getElementById('g_id_signin'),{ theme:'filled_blue',size:'large',text:'signin_with',shape:'pill',width:280 });
   const cached=ls.get('auth_cache');
   if(cached) google.accounts.id.prompt();
@@ -903,28 +903,34 @@ async function sincronizzaDaSheet() {
 }
 
 async function syncSilenziosa() {
-  const url=getScriptUrl();if(!url)return;
-  try{
-    // Sincronizza tutti gli anni disponibili
-    const annoCorrente=new Date().getFullYear();
-    const anniDaSinc=[annoCorrente, annoCorrente-1, annoCorrente-2];
-    let tutteSpese=[], tutteEntrate=[], membri=[];
-    for(const anno of anniDaSinc){
-      const r=await fetch(`${url}?azione=LEGGI&email=${encodeURIComponent(S.auth.email)}&anno=${anno}&limit=1000`);
-      const j=await r.json();if(!j.ok)continue;
-      tutteSpese=[...tutteSpese,...(j.spese||[])];
-      tutteEntrate=[...tutteEntrate,...(j.entrate||[])];
-      if(j.membri?.length) membri=j.membri;
-    }
-    ls.set('spese',tutteSpese);ls.set('entrate',tutteEntrate);ls.set('coda_sync',[]);
-    if(membri.length){ls.set('membri',membri);renderUtenti();}
-    ls.set('ultimo_sync',new Date().toISOString());
-    ls.set('anni_sincronizzati',anniDaSinc);
-    aggiornaRiepilogo();aggiornaListaSpese();aggiornaSearchMembri();
-    document.getElementById('cfg-count').textContent=(tutteSpese.length+tutteEntrate.length)+' record';
-    controllaBudget(tutteSpese);
+  const url = getScriptUrl(); if (!url) return;
+  try {
+    const ora  = new Date();
+    const anno = ora.getFullYear();
+    const r = await fetch(`${url}?azione=LEGGI&email=${encodeURIComponent(S.auth.email)}&anno=${anno}&limit=1000`);
+    const j = await r.json();
+    if (!j.ok) { console.log('[Sync] errore:', j.errore); return; }
+
+    // Mantieni dati anni precedenti già in locale, aggiorna solo anno corrente
+    const spesePrecedenti  = getSpese().filter(s  => new Date(s.data).getFullYear()  !== anno);
+    const entratePrecedenti = getEntrate().filter(e => parseInt(e.mese) !== anno);
+
+    ls.set('spese',   [...spesePrecedenti,  ...(j.spese   || [])]);
+    ls.set('entrate', [...entratePrecedenti, ...(j.entrate || [])]);
+    ls.set('coda_sync', []);
+    if (j.membri?.length) { ls.set('membri', j.membri); renderUtenti(); }
+    ls.set('ultimo_sync', new Date().toISOString());
+
+    // Aggiorna UI solo se il tab visibile è riepilogo o spese
+    aggiornaRiepilogo();
+    aggiornaListaSpese();
+    aggiornaSearchMembri();
+    document.getElementById('cfg-count').textContent = (getSpese().length + getEntrate().length) + ' record';
+    controllaBudget(getSpese());
     aggiornaStatoSync();
-  }catch(e){console.log('[Sync]',e.message);}
+  } catch(e) {
+    console.log('[Sync] errore:', e.message);
+  }
 }
 
 function aggiornaStatoSync() {
