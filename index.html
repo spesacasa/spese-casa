@@ -232,7 +232,12 @@ canvas{width:100%!important;max-height:220px}
       <div class="mese-label" id="mese-label"></div>
       <button class="mese-nav-btn" onclick="cambiaMese(1)">›</button>
     </div>
-    <!-- BUDGET BAR -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button class="btn btn-sm" id="btn-aggiorna" style="background:var(--card);border:1px solid var(--border);display:flex;align-items:center;gap:6px" onclick="aggiornaManuale()">
+        <span id="aggiorna-icon">🔄</span> <span>Aggiorna</span>
+      </button>
+    </div>
+    <div id="sync-alert-banner" style="display:none;background:#f7c94f22;border:1px solid #f7c94f44;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--yellow);align-items:center;gap:8px;cursor:pointer" onclick="aggiornaManuale()"></div>
     <div class="card" id="budget-card">
       <div class="card-title">🎯 Budget Spese Variabili</div>
       <div class="budget-bar-wrap">
@@ -680,8 +685,12 @@ window.onload=()=>{
 function onGoogleLogin(response) {
   document.getElementById('login-loader').style.display='flex';
   document.getElementById('login-error').textContent='';
-  const payload=parseJwt(response.credential);
-  S.auth.email=payload.email; S.auth.nome=payload.name; S.auth.foto=payload.picture; S.auth.token=response.credential;
+  const payload = parseJwt(response.credential);
+  S.auth.email = payload.email;
+  // Usa nome dalla mappa invece del nome Google
+  S.auth.nome  = EMAIL_NOMI[payload.email] || payload.name;
+  S.auth.foto  = payload.picture;
+  S.auth.token = response.credential;
   verificaRuolo(payload.email);
 }
 
@@ -707,8 +716,9 @@ function avviaApp() {
   document.getElementById('app').style.display='flex';
   inizializza();
   if(navigator.onLine) {
-    setTimeout(caricaImpostazioni, 500);  // carica categorie dal foglio
-    setTimeout(syncSilenziosa, 2000);     // poi sincronizza i dati
+    setTimeout(caricaImpostazioni, 500);
+    setTimeout(syncSilenziosa, 2000);
+    avviaSyncAutomatica(); // parte la sync ogni 5 minuti
   }
 }
 
@@ -751,8 +761,15 @@ function inizializza() {
   document.getElementById('readonly-banner').classList.toggle('hidden',p.scrivi!==false);
   const ce=document.getElementById('card-esporta');if(ce)ce.classList.toggle('hidden',!p.esporta);
 
-  // Usa nome membro dalla mappa email→nome, non il nome Google
-  S.utente = EMAIL_NOMI[S.auth.email] || getMembri()[0];
+  // Usa nome dalla mappa email→nome, poi dal foglio, poi dal nome Google
+  const nomeMappato = EMAIL_NOMI[S.auth.email];
+  S.utente = nomeMappato || getMembri()[0];
+  // Aggiorna anche il nome visualizzato in topbar e profilo
+  if (nomeMappato) {
+    document.getElementById('profilo-nome').textContent = nomeMappato;
+    document.getElementById('profilo-avatar').textContent = nomeMappato.slice(0,2).toUpperCase();
+    document.getElementById('avatar-initials').textContent = nomeMappato.slice(0,2).toUpperCase();
+  }
   renderUtenti(); aggiornaCatSelect(); aggiornaMeseLabel();
   aggiornaRiepilogo(); aggiornaListaSpese(); aggiornaSearchMembri();
   aggiornaStatoSync(); aggiornaStatoNotifiche();
@@ -763,12 +780,16 @@ function inizializza() {
 
 // ── UTENTI ──
 function renderUtenti() {
-  const sel=document.getElementById('utente-sel'); sel.innerHTML='';
-  const lista=S.auth.permessi?.tuttiDati?getMembri():[S.auth.nome||getMembri()[0]];
-  lista.forEach(m=>{
-    const c=document.createElement('div');
-    c.className='utente-chip'+(m===S.utente?' active':'');
-    c.textContent=m; c.onclick=()=>{S.utente=m;renderUtenti();};
+  const sel = document.getElementById('utente-sel');
+  sel.innerHTML = '';
+  // Membri dal foglio, sempre incluso "Comune" per tutti
+  let lista = getMembri();
+  if (!lista.includes('Comune')) lista = [...lista, 'Comune'];
+  lista.forEach(m => {
+    const c = document.createElement('div');
+    c.className = 'utente-chip' + (m === S.utente ? ' active' : '');
+    c.textContent = m;
+    c.onclick = () => { S.utente = m; renderUtenti(); };
     sel.appendChild(c);
   });
   aggiornaSearchMembri();
@@ -940,6 +961,7 @@ function aggiornaMeseLabel(){
 
 // ── RIEPILOGO ──
 function aggiornaRiepilogo(){
+  controllaSyncFreshness();
   const spese=getSpese().filter(s=>matchMese(s.data));
   const entrate=getEntrate().filter(e=>matchMeseStr(e.mese));
   const totEnt=entrate.reduce((s,e)=>s+e.importo,0);
@@ -1085,6 +1107,23 @@ function matchMese(ds){if(!ds)return false;const d=new Date(ds);return d.getMont
 function matchMeseStr(ms){if(!ms)return false;const[y,m]=ms.split('-').map(Number);return m-1===S.meseVis&&y===S.annoVis;}
 function matchMeseAnnoStr(ms,m,a){if(!ms)return false;const[y,mo]=ms.split('-').map(Number);return mo-1===m&&y===a;}
 function matchMeseAnnoNum(ds,m,a){if(!ds)return false;const d=new Date(ds);return d.getMonth()===m&&d.getFullYear()===a;}
+async function aggiornaManuale() {
+  const btn  = document.getElementById('btn-aggiorna');
+  const icon = document.getElementById('aggiorna-icon');
+  if (!navigator.onLine) { toast('Sei offline','error'); return; }
+  // Animazione rotazione
+  icon.style.transition = 'transform 1s linear';
+  icon.style.transform  = 'rotate(360deg)';
+  btn.disabled = true;
+  await syncSilenziosa();
+  setTimeout(() => {
+    icon.style.transition = '';
+    icon.style.transform  = '';
+    btn.disabled = false;
+  }, 1000);
+  toast('✅ Dati aggiornati!');
+}
+
 function toggleMembroDetail(id) {
   const el    = document.getElementById(id);
   const arrow = document.getElementById('arrow-'+id);
