@@ -957,12 +957,20 @@ function cambiaMese(d){
   S.meseVis+=d;
   if(S.meseVis<0){S.meseVis=11;S.annoVis--;}
   if(S.meseVis>11){S.meseVis=0;S.annoVis++;}
-  aggiornaMeseLabel();aggiornaRiepilogo();aggiornaListaSpese();cercaSpese();
-  if(!document.getElementById('tab-grafici').classList.contains('hidden'))aggiornaGrafici();
+  aggiornaMeseLabel();
+  aggiornaRiepilogo();
+  aggiornaListaSpese();
+  cercaSpese();
+  if(!document.getElementById('tab-grafici').classList.contains('hidden')) aggiornaGrafici();
 }
+
 function aggiornaMeseLabel(){
   const lbl=`${MESI_IT[S.meseVis]} ${S.annoVis}`;
-  ['mese-label','mese-label-2','mese-label-g'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=lbl;});
+  // Aggiorna TUTTE le label mese in tutti i tab
+  ['mese-label','mese-label-2','mese-label-g'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent=lbl;
+  });
 }
 
 // ── RIEPILOGO ──
